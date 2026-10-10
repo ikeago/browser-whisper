@@ -164,7 +164,7 @@ export class BrowserWhisper {
             const abort = () => {
                 if (settled) return;
                 cleanup();
-                // transformers.js 3.8.x does not expose an AbortSignal for pipeline()
+                // transformers.js (3.x and 4.x) does not expose an AbortSignal for pipeline()
                 // model fetches, so terminating the worker is the cancellation boundary.
                 // Source: https://huggingface.co/docs/transformers.js/en/api/utils/hub#utilshubpretrainedoptions--object
                 this.dispose();
