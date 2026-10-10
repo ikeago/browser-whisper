@@ -365,11 +365,8 @@
       <section id="requirements">
         <h2>Requirements</h2>
         <div class="callout">
-          <strong>WebGPU required.</strong> Use a Chromium-based browser (Chrome, Edge, Brave, Arc) with these flags enabled:
-          <ul>
-            <li><code>--enable-unsafe-webgpu</code></li>
-            <li><code>--enable-features=Vulkan</code></li>
-          </ul>
+          <strong>WebGPU is used when available</strong> (Chrome, Edge, and other browsers that support it). If no usable GPU adapter is found, the library automatically falls back to <strong>WebAssembly</strong>, which works everywhere but is slower.
+          <p style="margin:0.5rem 0 0">Optional Linux tip: Chrome on Linux may need WebGPU enabled manually, e.g. <code>--enable-unsafe-webgpu --enable-features=Vulkan</code>.</p>
         </div>
         <p>
           Your app must also send <strong>COOP/COEP headers</strong> on every page that loads
@@ -482,7 +479,7 @@ console.log(segments.map(s => s.text).join(' '))</code></pre>
               <tr><th>Option</th><th>Default</th><th>Description</th></tr>
             </thead>
             <tbody>
-              <tr><td><code>model</code></td><td><code>whisper-base</code></td><td>Whisper model size</td></tr>
+              <tr><td><code>model</code></td><td><code>whisper-tiny</code></td><td>Whisper model size</td></tr>
               <tr><td><code>language</code></td><td>auto</td><td>BCP-47 code, e.g. <code>en</code></td></tr>
               <tr><td><code>quantization</code></td><td><code>hybrid</code></td><td>fp32, fp16, q8, q4, or hybrid</td></tr>
             </tbody>
@@ -523,28 +520,28 @@ console.log(segments.map(s => s.text).join(' '))</code></pre>
 
       <section id="models">
         <h2>Models</h2>
-        <p>Download sizes use default <code>hybrid</code> quantization (encoder fp32 + decoder q4).</p>
+        <p>Download sizes use default <code>hybrid</code> quantization (encoder fp32 + decoder q4; Moonshine: q4), as listed on the Hugging Face <code>onnx-community</code> repos.</p>
         <div class="table-wrap">
           <table>
             <thead>
               <tr><th>Model</th><th>Size</th><th>Notes</th></tr>
             </thead>
             <tbody>
-              <tr><td><code>moonshine-tiny</code></td><td>~32 MB</td><td>English only · fastest</td></tr>
-              <tr><td><code>moonshine-base</code></td><td>~61 MB</td><td>English only</td></tr>
-              <tr><td><code>whisper-tiny</code></td><td>~64 MB</td><td>Multilingual · fastest Whisper</td></tr>
-              <tr><td><code>whisper-base</code></td><td>~136 MB</td><td>Multilingual · default</td></tr>
-              <tr><td><code>whisper-small</code></td><td>~510 MB</td><td>Multilingual · better accuracy</td></tr>
-              <tr><td><code>whisper-tiny_timestamped</code></td><td>~118 MB</td><td>Word-level timestamps</td></tr>
-              <tr><td><code>whisper-base_timestamped</code></td><td>~201 MB</td><td>Word-level timestamps</td></tr>
-              <tr><td><code>whisper-small_timestamped</code></td><td>~563 MB</td><td>Word-level timestamps</td></tr>
-              <tr><td><code>lite-whisper-large-v3-turbo-fast</code></td><td>~1.49 GB</td><td>Large · speed-optimized</td></tr>
-              <tr><td><code>lite-whisper-large-v3-turbo</code></td><td>~1.72 GB</td><td>Large · balanced</td></tr>
-              <tr><td><code>lite-whisper-large-v3-turbo-acc</code></td><td>~1.89 GB</td><td>Large · accuracy-optimized</td></tr>
-              <tr><td><code>whisper-large-v3-turbo</code></td><td>~2.69 GB</td><td>Best turbo accuracy</td></tr>
-              <tr><td><code>whisper-large-v3-turbo_timestamped</code></td><td>~2.69 GB</td><td>Turbo + word timestamps</td></tr>
-              <tr><td><code>whisper-large-v3</code></td><td>~3.12 GB</td><td>Highest accuracy</td></tr>
-              <tr><td><code>distil-whisper-small</code></td><td>~185 MB</td><td>English only · Distil</td></tr>
+              <tr><td><code>moonshine-tiny</code></td><td>~55 MB</td><td>English only · fastest</td></tr>
+              <tr><td><code>moonshine-base</code></td><td>~98 MB</td><td>English only</td></tr>
+              <tr><td><code>whisper-tiny</code></td><td>~120 MB</td><td>Multilingual · fastest Whisper · default</td></tr>
+              <tr><td><code>whisper-base</code></td><td>~206 MB</td><td>Multilingual</td></tr>
+              <tr><td><code>whisper-small</code></td><td>~586 MB</td><td>Multilingual · better accuracy</td></tr>
+              <tr><td><code>whisper-tiny_timestamped</code></td><td>~120 MB</td><td>Word-level timestamps</td></tr>
+              <tr><td><code>whisper-base_timestamped</code></td><td>~206 MB</td><td>Word-level timestamps</td></tr>
+              <tr><td><code>whisper-small_timestamped</code></td><td>~586 MB</td><td>Word-level timestamps</td></tr>
+              <tr><td><code>lite-whisper-large-v3-turbo-fast</code></td><td>~1.59 GB</td><td>Large · speed-optimized</td></tr>
+              <tr><td><code>lite-whisper-large-v3-turbo</code></td><td>~1.84 GB</td><td>Large · balanced</td></tr>
+              <tr><td><code>lite-whisper-large-v3-turbo-acc</code></td><td>~2.02 GB</td><td>Large · accuracy-optimized</td></tr>
+              <tr><td><code>whisper-large-v3-turbo</code></td><td>~2.88 GB</td><td>Best turbo accuracy</td></tr>
+              <tr><td><code>whisper-large-v3-turbo_timestamped</code></td><td>~2.88 GB</td><td>Turbo + word timestamps</td></tr>
+              <tr><td><code>whisper-large-v3</code></td><td>~3.35 GB</td><td>Highest accuracy</td></tr>
+              <tr><td><code>distil-whisper-small</code></td><td>~538 MB</td><td>English only · Distil</td></tr>
             </tbody>
           </table>
         </div>

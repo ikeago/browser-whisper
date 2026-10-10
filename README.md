@@ -133,11 +133,11 @@ Default: **`whisper-tiny`**. Hybrid quantization (encoder fp32 + decoder q4). We
 | Model | Download (approx.) | Notes |
 |-------|-------------------|--------|
 | `whisper-tiny` | ~120 MB | Fastest, default |
-| `whisper-base` | ~136 MB | |
-| `whisper-small` | ~510 MB | Better accuracy |
-| `whisper-large-v3-turbo` | ~2.7 GB | Strongest Whisper option |
-| `moonshine-tiny` / `moonshine-base` | ~32–61 MB | English only |
-| `distil-whisper-small` | ~185 MB | English only |
+| `whisper-base` | ~206 MB | |
+| `whisper-small` | ~586 MB | Better accuracy |
+| `whisper-large-v3-turbo` | ~2.9 GB | Strongest Whisper option |
+| `moonshine-tiny` / `moonshine-base` | ~55–98 MB | English only |
+| `distil-whisper-small` | ~538 MB | English only |
 
 Timestamped, lite, and large-v3 variants are supported too. Full list: [docs — Models](https://whisper.tanpreet.xyz/docs/#models).
 
