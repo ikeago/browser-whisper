@@ -147,6 +147,11 @@ export interface PCMChunk {
     samples: Float32Array;
     /** Start time of this chunk in seconds, relative to the file beginning */
     timestamp: number;
+    /**
+     * Seconds of real (non-padding) audio in this chunk. The final chunk is
+     * zero-padded to 30 s, so `samples.length` overstates its length.
+     */
+    duration?: number;
     /** True when this is the last chunk in the stream */
     final: boolean;
 }

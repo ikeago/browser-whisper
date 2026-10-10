@@ -12,6 +12,12 @@ Dates are npm publish dates in **IST (UTC+5:30)**, taken from the npm registry. 
 ### Added
 - `parakeet-ctc-0.6b` model (`onnx-community/parakeet-ctc-0.6b-ONNX`, q8 by default, ~612 MB): NVIDIA Parakeet CTC, English only, text without timestamps. Requires the transformers.js 4.x upgrade.
 
+### Changed
+- Upgraded transformers.js to 4.3.1 (#21). `dist/index.js` shrinks from ~1.96 MB to ~1.32 MB; the ONNX Runtime WASM files are now loaded from jsDelivr and cached in OPFS.
+
+### Fixed
+- Segment and word end times no longer run past the end of the audio. The final chunk is zero-padded to 30 s, so Parakeet CTC reported an 11 s file as one 0–30 s segment and Whisper word timestamps could land in the padded tail (e.g. 10.56–15.9 s on an 11 s clip). Chunks now carry their real duration and all segment/word ends are clamped to `min(chunkEnd, audio end)`, keeping `start <= end`.
+
 ## [1.1.1] - 2026-10-11
 
 ### Fixed

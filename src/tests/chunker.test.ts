@@ -104,3 +104,21 @@ describe('Chunker.flush', () => {
         expect(flushChunk.timestamp).toBeCloseTo(30, 5);
     });
 });
+
+describe('Chunker duration', () => {
+    it('reports real (unpadded) duration on the final chunk', () => {
+        const { chunker, received } = makeChunker();
+        chunker.push(new Float32Array(16_000 * 11));
+        chunker.flush();
+        expect(received[0].samples).toHaveLength(CHUNK_SIZE);
+        expect(received[0].duration).toBe(11);
+        expect(received[0].timestamp + received[0].duration!).toBe(11);
+    });
+    it('reports 30 s for full chunks and 0 for an empty final chunk', () => {
+        const { chunker, received } = makeChunker();
+        chunker.push(new Float32Array(CHUNK_SIZE));
+        chunker.flush();
+        expect(received[0].duration).toBe(30);
+        expect(received[1].duration).toBe(0);
+    });
+});

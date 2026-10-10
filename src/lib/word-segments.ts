@@ -14,6 +14,7 @@ export interface TimestampChunk {
 export function chunksToWords(
     chunks: TimestampChunk[],
     chunkOffsetSeconds: number,
+    maxEnd: number = Infinity,
 ): WordTimestamp[] {
     return chunks
         .map((c) => ({
@@ -21,7 +22,30 @@ export function chunksToWords(
             start: (c.timestamp[0] ?? 0) + chunkOffsetSeconds,
             end: (c.timestamp[1] ?? 0) + chunkOffsetSeconds,
         }))
-        .filter((w) => w.text.length > 0 && w.end >= w.start);
+        .filter((w) => w.text.length > 0 && w.end >= w.start)
+        .map((w) => clampSpan(w, maxEnd));
+}
+
+/**
+ * Clamp a timed span so it never runs past `maxEnd` (the real audio end),
+ * keeping `start <= end`. Models can report times inside the zero-padded
+ * tail of the final 30 s window, past the end of the actual audio.
+ */
+export function clampSpan<T extends { start: number; end: number }>(span: T, maxEnd: number): T {
+    if (!Number.isFinite(maxEnd)) return span;
+    const start = Math.min(span.start, maxEnd);
+    const end = Math.max(start, Math.min(span.end, maxEnd));
+    return start === span.start && end === span.end ? span : { ...span, start, end };
+}
+
+/** Clamp segments (and their words) to the real audio end. */
+export function clampSegments(segments: TranscriptSegment[], maxEnd: number): TranscriptSegment[] {
+    return segments.map((seg) => {
+        const clamped = clampSpan(seg, maxEnd);
+        return seg.words
+            ? { ...clamped, words: seg.words.map((w) => clampSpan(w, maxEnd)) }
+            : clamped;
+    });
 }
 
 /** Group word-level timestamps into readable segments for display and streaming */
