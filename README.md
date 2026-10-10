@@ -128,12 +128,12 @@ await BrowserWhisper.deleteModel('whisper-tiny')
 
 ## Models
 
-Default: **`whisper-base`**. Hybrid quantization (encoder fp32 + decoder q4). Weights from Hugging Face (`onnx-community`), cached in the browser after first use.
+Default: **`whisper-tiny`**. Hybrid quantization (encoder fp32 + decoder q4). Weights from Hugging Face (`onnx-community`), cached in the browser after first use.
 
 | Model | Download (approx.) | Notes |
 |-------|-------------------|--------|
-| `whisper-tiny` | ~64 MB | Fastest |
-| `whisper-base` | ~136 MB | Default |
+| `whisper-tiny` | ~120 MB | Fastest, default |
+| `whisper-base` | ~136 MB | |
 | `whisper-small` | ~510 MB | Better accuracy |
 | `whisper-large-v3-turbo` | ~2.7 GB | Strongest Whisper option |
 | `moonshine-tiny` / `moonshine-base` | ~32–61 MB | English only |
@@ -176,8 +176,9 @@ Missing features fall back automatically. **First run needs network** for WASM (
 | [Examples](https://whisper.tanpreet.xyz/examples/) | OPFS cache, live mic + VAD |
 | [Vite example](https://github.com/tanpreetjolly/browser-whisper-vite-demo) | Minimal Vite app |
 | [Next.js example](https://github.com/tanpreetjolly/browser-whisper-nextjs-demo) | App Router, client-only |
+| [Changelog](https://github.com/tanpreetjolly/browser-whisper/blob/main/CHANGELOG.md) | Release history |
 
-API types (`TranscriptSegment`, errors, `QuantizationType`, …): [docs — API](https://whisper.tanpreet.xyz/docs/#api) or [`dist/index.d.ts`](https://github.com/tanpreetjolly/browser-whisper/blob/main/dist/index.d.ts) after install.
+API types (`TranscriptSegment`, errors, `QuantizationType`, …): [docs — API](https://whisper.tanpreet.xyz/docs/#api) or [`dist/index.d.ts`](https://unpkg.com/browser-whisper/dist/index.d.ts) after install.
 
 ---
 
