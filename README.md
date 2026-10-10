@@ -6,12 +6,6 @@
 
 [Live demo](https://whisper.tanpreet.xyz/demo/) · [Documentation](https://whisper.tanpreet.xyz/docs/) · [Examples](https://whisper.tanpreet.xyz/examples/) · [GitHub](https://github.com/tanpreetjolly/browser-whisper)
 
-<p align="center">
-  <a href="https://whisper.tanpreet.xyz/demo/"><img src="./assets/demo.gif" width="560" alt="browser-whisper live demo: an 11-second JFK clip transcribed in the browser with Whisper Tiny"></a>
-  <br>
-  <sub>Live demo transcribing an 11s JFK clip with Whisper Tiny (model download and transcription sped up 12x).</sub>
-</p>
-
 [![npm version](https://img.shields.io/npm/v/browser-whisper.svg?style=flat-square)](https://www.npmjs.com/package/browser-whisper)
 [![license](https://img.shields.io/npm/l/browser-whisper.svg?style=flat-square)](https://github.com/tanpreetjolly/browser-whisper/blob/main/LICENSE)
 [![bundle size](https://img.shields.io/bundlephobia/minzip/browser-whisper?style=flat-square)](https://bundlephobia.com/package/browser-whisper)
