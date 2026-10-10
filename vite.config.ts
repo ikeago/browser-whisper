@@ -3,6 +3,9 @@ import { resolve } from 'path'
 
 export default defineConfig({
   build: {
+    // public/ holds demo-site assets (favicon, og-image, robots, sitemap);
+    // keep them out of the library's dist/.
+    copyPublicDir: false,
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       formats: ['es'],
