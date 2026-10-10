@@ -520,7 +520,7 @@ console.log(segments.map(s => s.text).join(' '))</code></pre>
 
       <section id="models">
         <h2>Models</h2>
-        <p>Download sizes use default <code>hybrid</code> quantization (encoder fp32 + decoder q4; Moonshine: q4), as listed on the Hugging Face <code>onnx-community</code> repos.</p>
+        <p>Download sizes use default <code>hybrid</code> quantization (encoder fp32 + decoder q4; Moonshine: q4; Parakeet: q8), as listed on the Hugging Face <code>onnx-community</code> repos.</p>
         <div class="table-wrap">
           <table>
             <thead>
@@ -529,6 +529,7 @@ console.log(segments.map(s => s.text).join(' '))</code></pre>
             <tbody>
               <tr><td><code>moonshine-tiny</code></td><td>~55 MB</td><td>English only · fastest</td></tr>
               <tr><td><code>moonshine-base</code></td><td>~98 MB</td><td>English only</td></tr>
+              <tr><td><code>parakeet-ctc-0.6b</code></td><td>~612 MB</td><td>English only · NVIDIA Parakeet CTC · lowercase, no punctuation, no timestamps</td></tr>
               <tr><td><code>whisper-tiny</code></td><td>~120 MB</td><td>Multilingual · fastest Whisper · default</td></tr>
               <tr><td><code>whisper-base</code></td><td>~206 MB</td><td>Multilingual</td></tr>
               <tr><td><code>whisper-small</code></td><td>~586 MB</td><td>Multilingual · better accuracy</td></tr>

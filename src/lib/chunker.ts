@@ -38,7 +38,7 @@ export class Chunker {
             const timestamp = this.consumedSamples / 16_000;
             this.consumedSamples += chunk.length;
             this.bufferedSamples -= chunk.length;
-            this.onChunk({ samples: chunk, timestamp, final: false });
+            this.onChunk({ samples: chunk, timestamp, duration: chunk.length / 16_000, final: false });
         }
     }
 
@@ -55,14 +55,14 @@ export class Chunker {
             // Nothing buffered — emit a silent final chunk so the whisper worker
             // knows we are done.
             const silence = new Float32Array(CHUNK_SIZE);
-            this.onChunk({ samples: silence, timestamp, final: true });
+            this.onChunk({ samples: silence, timestamp, duration: 0, final: true });
             return;
         }
 
         // Zero-pad to a full CHUNK_SIZE window
         const padded = new Float32Array(CHUNK_SIZE);
         padded.set(remaining);
-        this.onChunk({ samples: padded, timestamp, final: true });
+        this.onChunk({ samples: padded, timestamp, duration: remaining.length / 16_000, final: true });
     }
 
     // ---------------------------------------------------------------------------

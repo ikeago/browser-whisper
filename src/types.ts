@@ -17,6 +17,7 @@ export type ASRModel =
     | 'lite-whisper-large-v3-turbo-acc'
     | 'moonshine-tiny'
     | 'moonshine-base'
+    | 'parakeet-ctc-0.6b'
     | 'distil-whisper-small';
 
 export interface ModelConfig {
@@ -53,6 +54,12 @@ export const MODELS: Record<ASRModel, ModelConfig> = {
     'lite-whisper-large-v3-turbo-acc':      { hfId: 'onnx-community/lite-whisper-large-v3-turbo-acc-ONNX',      hybridDtype: WHISPER_HYBRID, ...SEGMENT_TS, supportsLanguage: true  },
     'moonshine-tiny':                       { hfId: 'onnx-community/moonshine-tiny-ONNX',                       hybridDtype: 'q4',           ...NO_TS,     supportsLanguage: false },
     'moonshine-base':                       { hfId: 'onnx-community/moonshine-base-ONNX',                       hybridDtype: 'q4',           ...NO_TS,     supportsLanguage: false },
+    // NVIDIA Parakeet CTC 0.6B (FastConformer + CTC head), English only, lowercase output without
+    // punctuation. Needs transformers.js >= 4 (`parakeet_ctc`). The CTC pipeline returns text only
+    // (no timestamps, ignores chunk_length_s/language), so it relies on our 30 s chunker.
+    // Default q8 (model_quantized.onnx + .onnx_data, ~612 MB): q4 and fp16 returned empty text
+    // for most inputs under onnxruntime-node CPU; fp32 is 2.4 GB of external data.
+    'parakeet-ctc-0.6b':                    { hfId: 'onnx-community/parakeet-ctc-0.6b-ONNX',                    hybridDtype: 'q8',           ...NO_TS,     supportsLanguage: false },
     'distil-whisper-small':                 { hfId: 'onnx-community/distil-small.en',                           hybridDtype: WHISPER_HYBRID, ...SEGMENT_TS, supportsLanguage: false },
 };
 
@@ -140,6 +147,11 @@ export interface PCMChunk {
     samples: Float32Array;
     /** Start time of this chunk in seconds, relative to the file beginning */
     timestamp: number;
+    /**
+     * Seconds of real (non-padding) audio in this chunk. The final chunk is
+     * zero-padded to 30 s, so `samples.length` overstates its length.
+     */
+    duration?: number;
     /** True when this is the last chunk in the stream */
     final: boolean;
 }
