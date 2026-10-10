@@ -37,7 +37,7 @@
     "url": "https://whisper.tanpreet.xyz/demo/",
     "applicationCategory": "MultimediaApplication",
     "operatingSystem": "Web Browser",
-    "browserRequirements": "Requires a browser with WebGPU support (Chrome 113+, Edge 113+)",
+    "browserRequirements": "Uses WebGPU when available (Chrome 113+, Edge 113+); falls back to WebAssembly in other modern browsers",
     "offers": {
       "@type": "Offer",
       "price": "0",
@@ -780,11 +780,7 @@
     <!-- Dismissable notice — tucks itself away once closed -->
     <div class="notice" id="notice">
       <div class="notice-content">
-        <strong>WebGPU required.</strong> Use Chromium (Chrome, Edge, Brave, Arc) with these flags enabled:
-        <ul class="notice-flags">
-          <li><code>--enable-unsafe-webgpu</code></li>
-          <li><code>--enable-features=Vulkan</code></li>
-        </ul>
+        <strong>Runs on WebGPU when available</strong> (Chrome, Edge, other Chromium browsers), otherwise falls back to WebAssembly (slower). Optional Linux tip: Chrome may need <code>--enable-unsafe-webgpu --enable-features=Vulkan</code>.
       </div>
       <button class="notice-dismiss" id="dismissNotice" title="Dismiss">✕</button>
     </div>
@@ -800,29 +796,29 @@
           </label>
           <select id="modelSelect">
             <optgroup label="Moonshine (English only)">
-              <option value="moonshine-tiny">Moonshine Tiny (~32 MB)</option>
-              <option value="moonshine-base">Moonshine Base (~61 MB)</option>
+              <option value="moonshine-tiny">Moonshine Tiny (~55 MB)</option>
+              <option value="moonshine-base">Moonshine Base (~98 MB)</option>
             </optgroup>
             <optgroup label="Whisper">
-              <option value="whisper-tiny" selected>Whisper Tiny (~40 MB)</option>
-              <option value="whisper-base">Whisper Base (~76 MB)</option>
-              <option value="whisper-small">Whisper Small (~240 MB)</option>
+              <option value="whisper-tiny" selected>Whisper Tiny (~120 MB)</option>
+              <option value="whisper-base">Whisper Base (~206 MB)</option>
+              <option value="whisper-small">Whisper Small (~586 MB)</option>
             </optgroup>
             <optgroup label="Whisper (timestamped)">
-              <option value="whisper-tiny_timestamped">Whisper Tiny Timestamped (~118 MB)</option>
-              <option value="whisper-base_timestamped">Whisper Base Timestamped (~201 MB)</option>
-              <option value="whisper-small_timestamped">Whisper Small Timestamped (~563 MB)</option>
+              <option value="whisper-tiny_timestamped">Whisper Tiny Timestamped (~120 MB)</option>
+              <option value="whisper-base_timestamped">Whisper Base Timestamped (~206 MB)</option>
+              <option value="whisper-small_timestamped">Whisper Small Timestamped (~586 MB)</option>
             </optgroup>
             <optgroup label="Whisper Large">
-              <option value="lite-whisper-large-v3-turbo-fast">Lite Large V3 Turbo Fast (~1.49 GB)</option>
-              <option value="lite-whisper-large-v3-turbo">Lite Large V3 Turbo (~1.72 GB)</option>
-              <option value="lite-whisper-large-v3-turbo-acc">Lite Large V3 Turbo Acc (~1.89 GB)</option>
-              <option value="whisper-large-v3-turbo">Whisper Large V3 Turbo (~2.69 GB)</option>
-              <option value="whisper-large-v3-turbo_timestamped">Whisper Large V3 Turbo Timestamped (~2.69 GB)</option>
-              <option value="whisper-large-v3">Whisper Large V3 (~3.12 GB)</option>
+              <option value="lite-whisper-large-v3-turbo-fast">Lite Large V3 Turbo Fast (~1.59 GB)</option>
+              <option value="lite-whisper-large-v3-turbo">Lite Large V3 Turbo (~1.84 GB)</option>
+              <option value="lite-whisper-large-v3-turbo-acc">Lite Large V3 Turbo Acc (~2.02 GB)</option>
+              <option value="whisper-large-v3-turbo">Whisper Large V3 Turbo (~2.88 GB)</option>
+              <option value="whisper-large-v3-turbo_timestamped">Whisper Large V3 Turbo Timestamped (~2.88 GB)</option>
+              <option value="whisper-large-v3">Whisper Large V3 (~3.35 GB)</option>
             </optgroup>
             <optgroup label="Distil-Whisper (English only)">
-              <option value="distil-whisper-small">Distil Whisper Small (~185 MB)</option>
+              <option value="distil-whisper-small">Distil Whisper Small (~538 MB)</option>
             </optgroup>
           </select>
           <button id="transcribeBtn" disabled>Transcribe</button>
