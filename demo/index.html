@@ -1044,9 +1044,15 @@
               } else {
                 showProgress();
                 setProgress(progress);
+                // The worker caps file progress at 0.99 and then holds it there while
+                // ONNX sessions are created and a warm-up inference compiles shaders.
+                // Progress also fires when files are read from the OPFS cache, so
+                // say "Loading" rather than "Downloading".
                 statusLog.textContent = progress === 0
-                  ? 'Downloading model…'
-                  : `Downloading model… ${pct}%`;
+                  ? 'Loading model…'
+                  : progress >= 0.99
+                    ? 'Initializing model (first run compiles GPU shaders)…'
+                    : `Loading model… ${pct}%`;
               }
             } else if (stage === 'decoding') {
               hideProgress();
