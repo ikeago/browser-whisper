@@ -22,6 +22,7 @@ import type { TranscriptSegment } from '../types.js';
 import { ModelLoadError } from '../errors.js';
 import { createOPFSCache } from '../lib/opfs-cache.js';
 import { hasWebGPUAdapter } from '../lib/webgpu.js';
+import { createLoadProgressTracker } from '../lib/load-progress.js';
 import { chunksToWords, groupWordsIntoSegments, type TimestampChunk } from '../lib/word-segments.js';
 
 // ---------------------------------------------------------------------------
@@ -33,17 +34,17 @@ import { chunksToWords, groupWordsIntoSegments, type TimestampChunk } from '../l
 // stores new downloads in OPFS.
 env.useBrowserCache = false;
 env.useCustomCache = true;
-// @ts-expect-error - customCache is part of transformers.js runtime env
 env.customCache = createOPFSCache({ legacyCacheName: env.cacheKey ?? 'transformers-cache' });
 // Prevent the library from trying file:// lookups in browser context
 env.allowLocalModels = false;
 
-// Point onnxruntime-web to CDN for its WASM/JSEP files. This is required because
-// onnxruntime-web creates an internal blob URL proxy worker for threading, and that
-// blob worker needs absolute URLs to load its assets (relative paths fail from blob: context).
-// The version here must match the installed @huggingface/transformers version.
-// @ts-expect-error - wasmPaths exists on env.backends.onnx.wasm
-env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/dist/';
+// WASM/JSEP runtime files: transformers.js 4.x sets env.backends.onnx.wasm.wasmPaths
+// itself to absolute jsDelivr URLs for the exact onnxruntime-web version it bundles
+// (https://cdn.jsdelivr.net/npm/onnxruntime-web@<version>/dist/ort-wasm-simd-threaded.asyncify.{mjs,wasm}).
+// 3.x needed a manual override pinned to the transformers version; 4.x no longer ships
+// those files in its own dist/, so we must NOT override it. Absolute URLs are still what
+// the blob: worker needs. With env.useWasmCache (default true) the .wasm/.mjs are also
+// stored through env.customCache, i.e. our OPFS cache.
 
 // ---------------------------------------------------------------------------
 // Worker state
@@ -106,8 +107,10 @@ self.onmessage = async (e: MessageEvent) => {
                 currentQuantization = quantization;
 
                 // transformers.js downloads multiple files concurrently. To prevent the loading bar
-                // from jumping wildly as different files report progress, we track them here.
-                const downloadCache = new Map<string, { loaded: number; total: number }>();
+                // from jumping wildly as different files report progress, we aggregate them here.
+                const trackProgress = createLoadProgressTracker((progress) => {
+                    postMain({ type: 'progress', event: { stage: 'loading', progress } });
+                });
 
                 const dtype = quantization === 'hybrid' ? config.hybridDtype : quantization;
 
@@ -118,52 +121,17 @@ self.onmessage = async (e: MessageEvent) => {
                         {
                             device,
                             dtype,
-                            progress_callback: (progressInfo: any) => {
-                                const { status, file, loaded, total } = progressInfo;
-
-                                // 'initiate' fires first with the file's total size
-                                if (status === 'initiate' && file && total) {
-                                    downloadCache.set(file, { loaded: 0, total });
-                                    return;
-                                }
-
-                                // 'progress' fires repeatedly with updated loaded bytes
-                                if (status === 'progress' && file) {
-                                    const prev = downloadCache.get(file);
-                                    downloadCache.set(file, {
-                                        loaded: loaded || 0,
-                                        total: total || prev?.total || 0,
-                                    });
-                                }
-
-                                // Skip all other statuses ('done', 'ready', etc.)
-                                if (status !== 'progress' && status !== 'initiate') return;
-
-                                let totalLoaded = 0;
-                                let totalExpected = 0;
-                                for (const state of downloadCache.values()) {
-                                    totalLoaded += state.loaded;
-                                    totalExpected += state.total;
-                                }
-
-                                if (totalExpected > 0) {
-                                    const rawProgress = totalLoaded / totalExpected;
-                                    postMain({
-                                        type: 'progress',
-                                        // Cap at 0.99 until shader compilation completes
-                                        event: { stage: 'loading', progress: Math.min(rawProgress, 0.99) },
-                                    });
-                                }
-                            },
+                            progress_callback: trackProgress,
                         },
                     )) as ASRPipeline;
                 };
 
                 // Check for a usable GPU adapter *before* asking transformers.js for WebGPU.
-                // transformers.js 3.x memoizes the first InferenceSession.create() promise
-                // (`wasmInitPromise` in backends/onnx.js) and awaits it before every later
-                // session, so if a WebGPU session fails first, the WASM fallback re-throws the
-                // same "Failed to get GPU adapter" error in this worker.
+                // transformers.js 4.x serialises every InferenceSession.create() on a module-level
+                // promise chain (`webInitChain = webInitChain.then(load)` in backends/onnx.js).
+                // A rejected WebGPU session leaves that chain rejected, so every later session
+                // in this worker (including the WASM fallback) re-throws the same error.
+                // (3.x had the same failure mode via the memoized `wasmInitPromise`.)
                 if (await hasWebGPUAdapter()) {
                     try {
                         asrPipeline = await loadPipeline('webgpu');

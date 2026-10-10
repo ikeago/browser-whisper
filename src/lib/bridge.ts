@@ -13,7 +13,8 @@
  * All dependencies (@huggingface/transformers, mediabunny, onnxruntime-web)
  * are bundled into the blobs — bare specifiers cannot be resolved from a
  * blob: URL at runtime. WASM binaries are excluded via the .wasm alias and
- * loaded from CDN at runtime via env.backends.onnx.wasm.wasmPaths instead.
+ * loaded from CDN at runtime (transformers.js 4.x points wasmPaths at the
+ * matching onnxruntime-web build on jsDelivr).
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
