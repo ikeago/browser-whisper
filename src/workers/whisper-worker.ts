@@ -21,6 +21,7 @@ import { MODELS } from '../types.js';
 import type { TranscriptSegment } from '../types.js';
 import { ModelLoadError } from '../errors.js';
 import { createOPFSCache } from '../lib/opfs-cache.js';
+import { hasWebGPUAdapter } from '../lib/webgpu.js';
 import { chunksToWords, groupWordsIntoSegments, type TimestampChunk } from '../lib/word-segments.js';
 
 // ---------------------------------------------------------------------------
@@ -158,11 +159,21 @@ self.onmessage = async (e: MessageEvent) => {
                     )) as ASRPipeline;
                 };
 
-                try {
-                    asrPipeline = await loadPipeline('webgpu');
-                } catch (gpuErr) {
-                    const msg = gpuErr instanceof Error ? gpuErr.message : String(gpuErr);
-                    console.warn(`[browser-whisper] WebGPU initialization failed (${msg}). Falling back to WASM execution.`);
+                // Check for a usable GPU adapter *before* asking transformers.js for WebGPU.
+                // transformers.js 3.x memoizes the first InferenceSession.create() promise
+                // (`wasmInitPromise` in backends/onnx.js) and awaits it before every later
+                // session, so if a WebGPU session fails first, the WASM fallback re-throws the
+                // same "Failed to get GPU adapter" error in this worker.
+                if (await hasWebGPUAdapter()) {
+                    try {
+                        asrPipeline = await loadPipeline('webgpu');
+                    } catch (gpuErr) {
+                        const msg = gpuErr instanceof Error ? gpuErr.message : String(gpuErr);
+                        console.warn(`[browser-whisper] WebGPU initialization failed (${msg}). Falling back to WASM execution.`);
+                        asrPipeline = await loadPipeline('wasm');
+                    }
+                } else {
+                    console.warn('[browser-whisper] No WebGPU adapter available. Using WASM execution.');
                     asrPipeline = await loadPipeline('wasm');
                 }
 
