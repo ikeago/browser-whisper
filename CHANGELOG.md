@@ -9,6 +9,20 @@ Dates are npm publish dates in **IST (UTC+5:30)**, taken from the npm registry. 
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-11
+
+### Fixed
+- Without a WebGPU adapter, the worker now goes straight to WASM instead of failing: it checks `navigator.gpu.requestAdapter()` before creating a WebGPU session, because a failed WebGPU session made the WASM fallback in the same worker fail too (#9).
+- `@vercel/analytics` moved from dependencies to devDependencies, so installs no longer pull it in; only the demo site uses it (#7).
+- Demo-site files (favicon, OG image, robots.txt, sitemap.xml) are no longer shipped in the npm package (#8).
+
+### Changed
+- Demo shows "Initializing model" after the download instead of sitting at "Downloading model… 99%" (#10).
+- README: default model corrected to `whisper-tiny`, whisper-tiny size corrected to ~120 MB, broken types link fixed (#6). Full changelog history added (#5).
+
+### Added
+- GitHub Actions workflow that publishes to npm with provenance when a GitHub release is published.
+
 ## [1.1.0] - 2026-05-31
 
 ### Added
@@ -113,7 +127,8 @@ Dates are npm publish dates in **IST (UTC+5:30)**, taken from the npm registry. 
 - Progress stages for loading, decoding, and transcribing (8a2bb8c).
 - Type declarations emitted in the build (6ae913b).
 
-[Unreleased]: https://github.com/tanpreetjolly/browser-whisper/compare/03cbfb7...HEAD
+[Unreleased]: https://github.com/tanpreetjolly/browser-whisper/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/tanpreetjolly/browser-whisper/releases/tag/v1.1.1
 [1.1.0]: https://www.npmjs.com/package/browser-whisper/v/1.1.0
 [1.0.2]: https://www.npmjs.com/package/browser-whisper/v/1.0.2
 [1.0.1]: https://www.npmjs.com/package/browser-whisper/v/1.0.1
