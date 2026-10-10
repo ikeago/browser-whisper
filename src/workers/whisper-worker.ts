@@ -18,12 +18,11 @@ import type {
     QuantizationType,
 } from '../types.js';
 import { MODELS } from '../types.js';
-import type { TranscriptSegment } from '../types.js';
 import { ModelLoadError } from '../errors.js';
 import { createOPFSCache } from '../lib/opfs-cache.js';
 import { hasWebGPUAdapter } from '../lib/webgpu.js';
 import { createLoadProgressTracker } from '../lib/load-progress.js';
-import { chunksToWords, clampSegments, groupWordsIntoSegments, type TimestampChunk } from '../lib/word-segments.js';
+import { buildSegments, type TimestampChunk } from '../lib/word-segments.js';
 
 // ---------------------------------------------------------------------------
 // transformers.js environment setup
@@ -235,30 +234,7 @@ async function transcribeChunk(chunk: PCMChunk): Promise<void> {
         chunks?: TimestampChunk[];
     };
 
-    let segments: TranscriptSegment[];
-    // Real end of audio in this chunk: the final chunk is zero-padded to 30 s,
-    // so samples.length would overshoot the file length.
-    const chunkEnd = chunk.timestamp + (chunk.duration ?? chunk.samples.length / 16_000);
-
-    if (config.supportsWordTimestamps && output.chunks?.length) {
-        const words = chunksToWords(output.chunks, chunk.timestamp, chunkEnd);
-        segments = groupWordsIntoSegments(words);
-    } else if (output.chunks?.length) {
-        segments = output.chunks.map((c) => ({
-            text: c.text.trim(),
-            start: (c.timestamp[0] ?? 0) + chunk.timestamp,
-            end: (c.timestamp[1] ?? 0) + chunk.timestamp,
-        })).filter((s) => s.text.length > 0);
-    } else if (output.text.trim()) {
-        segments = [{
-            text: output.text.trim(),
-            start: chunk.timestamp,
-            end: chunkEnd,
-        }];
-    } else {
-        segments = [];
-    }
-    segments = clampSegments(segments, chunkEnd);
+    const segments = buildSegments(output, chunk, config);
 
     for (const segment of segments) {
         postMain({ type: 'segment', segment });

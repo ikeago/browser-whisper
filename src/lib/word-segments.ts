@@ -1,4 +1,4 @@
-import type { TranscriptSegment, WordTimestamp } from '../types.js';
+import type { ModelConfig, PCMChunk, TranscriptSegment, WordTimestamp } from '../types.js';
 
 const SENTENCE_END = /[.!?…]["')\]]*$/;
 const MAX_WORDS_PER_SEGMENT = 14;
@@ -88,4 +88,33 @@ export function groupWordsIntoSegments(words: WordTimestamp[]): TranscriptSegmen
 
     flush();
     return segments;
+}
+
+/**
+ * Turn one pipeline result into file-relative segments for a PCM chunk.
+ * Every branch (word timestamps, segment timestamps, text-only models such as
+ * Parakeet CTC) is clamped to the chunk's real audio end, because the final
+ * chunk is zero-padded to a 30 s window.
+ */
+export function buildSegments(
+    output: { text: string; chunks?: TimestampChunk[] },
+    chunk: Pick<PCMChunk, 'timestamp' | 'samples' | 'duration'>,
+    config: Pick<ModelConfig, 'supportsWordTimestamps'>,
+): TranscriptSegment[] {
+    const chunkEnd = chunk.timestamp + (chunk.duration ?? chunk.samples.length / 16_000);
+    let segments: TranscriptSegment[];
+    if (config.supportsWordTimestamps && output.chunks?.length) {
+        segments = groupWordsIntoSegments(chunksToWords(output.chunks, chunk.timestamp, chunkEnd));
+    } else if (output.chunks?.length) {
+        segments = output.chunks.map((c) => ({
+            text: c.text.trim(),
+            start: (c.timestamp[0] ?? 0) + chunk.timestamp,
+            end: (c.timestamp[1] ?? 0) + chunk.timestamp,
+        })).filter((s) => s.text.length > 0);
+    } else if (output.text.trim()) {
+        segments = [{ text: output.text.trim(), start: chunk.timestamp, end: chunkEnd }];
+    } else {
+        segments = [];
+    }
+    return clampSegments(segments, chunkEnd);
 }
