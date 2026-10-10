@@ -138,6 +138,7 @@ Default: **`whisper-tiny`**. Hybrid quantization (encoder fp32 + decoder q4). We
 | `whisper-large-v3-turbo` | ~2.9 GB | Strongest Whisper option |
 | `moonshine-tiny` / `moonshine-base` | ~55–98 MB | English only |
 | `distil-whisper-small` | ~538 MB | English only |
+| `parakeet-ctc-0.6b` | ~612 MB | English only · NVIDIA Parakeet CTC · lowercase, no punctuation, no timestamps |
 
 Timestamped, lite, and large-v3 variants are supported too. Full list: [docs — Models](https://whisper.tanpreet.xyz/docs/#models).
 

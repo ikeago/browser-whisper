@@ -9,6 +9,9 @@ Dates are npm publish dates in **IST (UTC+5:30)**, taken from the npm registry. 
 
 ## [Unreleased]
 
+### Added
+- `parakeet-ctc-0.6b` model (`onnx-community/parakeet-ctc-0.6b-ONNX`, q8 by default, ~612 MB): NVIDIA Parakeet CTC, English only, text without timestamps. Requires the transformers.js 4.x upgrade.
+
 ## [1.1.1] - 2026-10-11
 
 ### Fixed
