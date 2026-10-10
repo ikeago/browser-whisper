@@ -1,0 +1,56 @@
+name: Bug report
+description: Something isn't working as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead? Steps to reproduce help a lot.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: browser-whisper version
+      placeholder: "1.1.1"
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      placeholder: "Chrome 141"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: "macOS 15, Windows 11, Ubuntu 24.04..."
+    validations:
+      required: true
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU / backend
+      description: GPU model, and whether WebGPU or the WebAssembly fallback was used (see chrome://gpu if unsure).
+      placeholder: "Apple M2, WebGPU"
+  - type: input
+    id: model
+    attributes:
+      label: Model and quantization
+      placeholder: "whisper-tiny, hybrid"
+    validations:
+      required: true
+  - type: input
+    id: file
+    attributes:
+      label: Input file type and length
+      placeholder: "MP4 (H.264/AAC), 12 min / microphone"
+  - type: textarea
+    id: console
+    attributes:
+      label: Console output
+      description: Paste any errors or warnings from the browser devtools console.
+      render: shell
