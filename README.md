@@ -201,3 +201,5 @@ Issues and PRs welcome on [GitHub](https://github.com/tanpreetjolly/browser-whis
 ## License
 
 [MIT](https://github.com/tanpreetjolly/browser-whisper/blob/main/LICENSE) © [Tanpreet Singh Jolly](https://github.com/tanpreetjolly)
+
+The MIT License covers the code, not the **browser-whisper** name or logo. Forks and derivatives must keep the copyright notice and use a different name. See [TRADEMARK.md](https://github.com/tanpreetjolly/browser-whisper/blob/main/TRADEMARK.md).
