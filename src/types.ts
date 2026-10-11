@@ -188,4 +188,4 @@ export type MainThreadMessage =
     | { type: 'progress'; event: TranscribeProgress }
     | { type: 'ready' }
     | { type: 'done' }
-    | { type: 'error'; message: string };
+    | { type: 'error'; message: string; /** Set when the error happened while loading this model (Hub ID). */ loadModelId?: string };

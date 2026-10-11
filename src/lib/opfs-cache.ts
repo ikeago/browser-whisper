@@ -42,14 +42,16 @@ export function createOPFSCache(options: OPFSCacheOptions): CacheLike {
             const legacyResponse = await readFromLegacyCache(options.legacyCacheName, normalized);
             if (!legacyResponse) return undefined;
 
-            await writeToOPFS(rootName, key, normalized.url, legacyResponse.clone());
+            await bestEffortWrite(rootName, key, normalized.url, legacyResponse.clone());
             return legacyResponse;
         },
 
         async put(request: RequestInfo | URL, response: Response): Promise<void> {
             const normalized = normalizeRequest(request);
             const key = await createCacheKey(normalized.url);
-            await writeToOPFS(rootName, key, normalized.url, response.clone());
+            // Caching is best-effort: a failed write (quota, OOM, aborted stream) must never
+            // reject here, or the model load that triggered it would fail/hang.
+            await bestEffortWrite(rootName, key, normalized.url, response.clone());
         },
     };
 }
@@ -156,6 +158,21 @@ async function readFromOPFS(
     });
 }
 
+async function bestEffortWrite(
+    rootName: string,
+    key: string,
+    url: string,
+    response: Response,
+): Promise<void> {
+    try {
+        await writeToOPFS(rootName, key, url, response);
+    } catch (error) {
+        console.warn(`[browser-whisper] Unable to cache ${url} in OPFS; continuing without cache.`, error);
+        // Release an unread clone so it stops buffering (not awaited; see writeFile).
+        if (response.body && !response.body.locked) void response.body.cancel().catch(() => {});
+    }
+}
+
 async function writeToOPFS(
     rootName: string,
     key: string,
@@ -169,8 +186,14 @@ async function writeToOPFS(
     const metadata = await getDirectory(root, 'metadata');
     const fileName = `${key}.${crypto.randomUUID()}.bin`;
 
-    // Stream to disk: external-data files (e.g. whisper-large-v3's .onnx_data) are multi-GB.
-    await writeFile(files, fileName, response.body ?? (await response.arrayBuffer()));
+    try {
+        // Stream to disk so multi-GB external-data files never need a second in-memory copy.
+        await writeFile(files, fileName, response.body ?? (await response.arrayBuffer()));
+    } catch (error) {
+        // writeFile already removes partial stream writes; also cover the non-stream path.
+        await removeEntryIfExists(files, fileName).catch(() => {});
+        throw error;
+    }
 
     const responseMetadata: StoredResponseMetadata = {
         url,
@@ -181,7 +204,13 @@ async function writeToOPFS(
     };
 
     const metadataBytes = new TextEncoder().encode(JSON.stringify(responseMetadata));
-    await writeFile(metadata, `${key}.json`, metadataBytes);
+    try {
+        await writeFile(metadata, `${key}.json`, metadataBytes);
+    } catch (error) {
+        await removeEntryIfExists(metadata, `${key}.json`).catch(() => {});
+        await removeEntryIfExists(files, fileName).catch(() => {});
+        throw error;
+    }
 }
 
 function getHeaders(response: Response): Array<[string, string]> {
@@ -236,8 +265,12 @@ async function writeFile(
                 await writable.write(value as Uint8Array<ArrayBuffer>);
             }
         } catch (error) {
+            // Stop buffering into this tee branch. Don't await: per the Streams spec, cancelling
+            // one branch of a cloned Response only settles once the *other* branch is cancelled
+            // too, so awaiting here would hang while transformers.js is still reading its copy.
+            void reader.cancel().catch(() => {});
             await writable.abort?.().catch(() => {});
-            await removeEntryIfExists(directory, name);
+            await removeEntryIfExists(directory, name).catch(() => {});
             throw error;
         }
         await writable.close();

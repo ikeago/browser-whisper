@@ -36,8 +36,12 @@ class FakeFileHandle {
     }
 }
 
+/** Test hook: when set, FakeWritable.write throws this after `failWritesAfter` successful writes. */
+const writeFailure: { error?: Error; after: number } = { after: 0 };
+
 class FakeWritable {
     private bytes = new Uint8Array();
+    private writes = 0;
 
     constructor(
         private readonly name: string,
@@ -45,17 +49,23 @@ class FakeWritable {
     ) { }
 
     async write(data: BufferSource | Blob): Promise<void> {
-        if (data instanceof Blob) {
-            this.bytes = new Uint8Array(await data.arrayBuffer());
-            return;
-        }
+        if (writeFailure.error && this.writes >= writeFailure.after) throw writeFailure.error;
+        this.writes++;
 
-        const view = ArrayBuffer.isView(data)
-            ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
-            : new Uint8Array(data);
+        const view = data instanceof Blob
+            ? new Uint8Array(await data.arrayBuffer())
+            : ArrayBuffer.isView(data)
+                ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+                : new Uint8Array(data);
 
-        this.bytes = new Uint8Array(view);
+        // Append, like a real FileSystemWritableFileStream (streamed writes arrive in chunks).
+        const next = new Uint8Array(this.bytes.length + view.length);
+        next.set(this.bytes);
+        next.set(view, this.bytes.length);
+        this.bytes = next;
     }
+
+    async abort(): Promise<void> {}
 
     async close(): Promise<void> {
         this.files.set(this.name, this.bytes);
@@ -145,6 +155,8 @@ const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator
 const originalCaches = Object.getOwnPropertyDescriptor(globalThis, 'caches');
 
 afterEach(() => {
+    writeFailure.error = undefined;
+    writeFailure.after = 0;
     restoreGlobal('navigator', originalNavigator);
     restoreGlobal('caches', originalCaches);
 });
@@ -236,7 +248,81 @@ describe('createOPFSCache', () => {
     });
 });
 
-function installFakeOPFS(): void {
+describe('createOPFSCache best-effort writes', () => {
+    function chunkedResponse(chunks: string[]): Response {
+        const encoder = new TextEncoder();
+        return new Response(new ReadableStream<Uint8Array>({
+            start(controller) {
+                for (const chunk of chunks) controller.enqueue(encoder.encode(chunk));
+                controller.close();
+            },
+        }));
+    }
+
+    it('streams multi-chunk bodies to OPFS intact', async () => {
+        installFakeOPFS();
+        const cache = createOPFSCache({ legacyCacheName: 'transformers-cache' });
+        const request = new Request('https://huggingface.co/m/resolve/main/onnx/encoder_model.onnx_data');
+
+        await cache.put(request, chunkedResponse(['aaa', 'bbb', 'ccc']));
+
+        expect(await (await cache.match(request))!.text()).toBe('aaabbbccc');
+    });
+
+    it('does not reject when a streamed write fails mid-file, and leaves no partial entry', async () => {
+        const root = installFakeOPFS();
+        const cache = createOPFSCache({ legacyCacheName: 'transformers-cache' });
+        const request = new Request('https://huggingface.co/m/resolve/main/onnx/encoder_model.onnx_data');
+        writeFailure.error = new RangeError('Array buffer allocation failed');
+        writeFailure.after = 1;
+        const warn = console.warn;
+        const warnings: unknown[][] = [];
+        console.warn = (...args: unknown[]) => { warnings.push(args); };
+        try {
+            await cache.put(request, chunkedResponse(['aaa', 'bbb', 'ccc']));
+        } finally {
+            console.warn = warn;
+        }
+
+        expect(warnings.length).toBe(1);
+        writeFailure.error = undefined;
+        expect(await cache.match(request)).toBeUndefined();
+        const files = await root.getDirectoryHandle('browser-whisper-transformers-cache')
+            .then((r) => r.getDirectoryHandle('files'));
+        const names: string[] = [];
+        for await (const [name] of files.entries()) names.push(name);
+        expect(names).toEqual([]);
+    });
+
+    it('does not reject when OPFS is unavailable', async () => {
+        Object.defineProperty(globalThis, 'navigator', { configurable: true, value: {} });
+        const cache = createOPFSCache({ legacyCacheName: 'transformers-cache' });
+        const warn = console.warn;
+        console.warn = () => {};
+        try {
+            await cache.put(new Request('https://huggingface.co/m/config.json'), new Response('x'));
+        } finally {
+            console.warn = warn;
+        }
+    });
+
+    it('leaves the caller\'s response readable after a failed write', async () => {
+        installFakeOPFS();
+        const cache = createOPFSCache({ legacyCacheName: 'transformers-cache' });
+        writeFailure.error = new Error('QuotaExceededError');
+        const response = new Response('network-bytes');
+        const warn = console.warn;
+        console.warn = () => {};
+        try {
+            await cache.put(new Request('https://huggingface.co/m/config.json'), response);
+        } finally {
+            console.warn = warn;
+        }
+        expect(await response.text()).toBe('network-bytes');
+    });
+});
+
+function installFakeOPFS(): FakeDirectoryHandle {
     const root = new FakeDirectoryHandle();
 
     Object.defineProperty(globalThis, 'navigator', {
@@ -249,6 +335,7 @@ function installFakeOPFS(): void {
             },
         },
     });
+    return root;
 }
 
 function installFakeLegacyCache(): FakeBrowserCache {
