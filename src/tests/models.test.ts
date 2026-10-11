@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { MODELS } from '../types';
+import { MODELS, type ASRModel } from '../types';
 
 describe('MODELS', () => {
     test('word timestamps imply segment timestamps', () => {
@@ -11,6 +11,39 @@ describe('MODELS', () => {
     test('Hugging Face IDs are unique', () => {
         const ids = Object.values(MODELS).map((m) => m.hfId);
         expect(new Set(ids).size).toBe(ids.length);
+    });
+
+    test('every model uses an onnx-community Hugging Face ID', () => {
+        for (const config of Object.values(MODELS)) {
+            expect(config.hfId).toStartWith('onnx-community/');
+            expect(config.hfId.length).toBeGreaterThan('onnx-community/'.length);
+        }
+    });
+
+    test('timestamped model variants support word timestamps', () => {
+        for (const [name, config] of Object.entries(MODELS)) {
+            if (name.endsWith('_timestamped')) expect(config.supportsWordTimestamps).toBe(true);
+        }
+    });
+
+    test('English-only models reject language selection', () => {
+        const englishOnlyModels = [
+            'moonshine-tiny',
+            'moonshine-base',
+            'distil-whisper-small',
+        ] satisfies ASRModel[];
+
+        for (const model of englishOnlyModels) {
+            expect(MODELS[model].supportsLanguage).toBe(false);
+        }
+    });
+
+    test('Moonshine models do not support timestamps', () => {
+        const moonshineModels = ['moonshine-tiny', 'moonshine-base'] satisfies ASRModel[];
+
+        for (const model of moonshineModels) {
+            expect(MODELS[model].supportsTimestamps).toBe(false);
+        }
     });
 
     test('parakeet-ctc-0.6b is English-only CTC with no timestamps and an explicit q8 dtype', () => {
