@@ -169,7 +169,8 @@ async function writeToOPFS(
     const metadata = await getDirectory(root, 'metadata');
     const fileName = `${key}.${crypto.randomUUID()}.bin`;
 
-    await writeFile(files, fileName, await response.arrayBuffer());
+    // Stream to disk: external-data files (e.g. whisper-large-v3's .onnx_data) are multi-GB.
+    await writeFile(files, fileName, response.body ?? (await response.arrayBuffer()));
 
     const responseMetadata: StoredResponseMetadata = {
         url,
@@ -222,10 +223,26 @@ async function getExistingDirectory(
 async function writeFile(
     directory: FileSystemDirectoryHandle,
     name: string,
-    data: BufferSource | Blob,
+    data: BufferSource | Blob | ReadableStream<Uint8Array<ArrayBuffer>>,
 ): Promise<void> {
     const handle = await directory.getFileHandle(name, { create: true });
     const writable = await handle.createWritable();
+    if (data instanceof ReadableStream) {
+        const reader = data.getReader();
+        try {
+            for (;;) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                await writable.write(value as Uint8Array<ArrayBuffer>);
+            }
+        } catch (error) {
+            await writable.abort?.().catch(() => {});
+            await removeEntryIfExists(directory, name);
+            throw error;
+        }
+        await writable.close();
+        return;
+    }
     await writable.write(data);
     await writable.close();
 }
