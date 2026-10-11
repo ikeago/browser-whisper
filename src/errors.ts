@@ -53,3 +53,10 @@ export class NoAudioTrackError extends BrowserWhisperError {
         this.name = 'NoAudioTrackError';
     }
 }
+
+/** Builds the error `waitForReady` rejects with: a ModelLoadError for load failures. */
+export function readyError(msg: { message: string; loadModelId?: string }): BrowserWhisperError {
+    return msg.loadModelId
+        ? new ModelLoadError(msg.loadModelId, new Error(msg.message))
+        : new BrowserWhisperError(msg.message);
+}

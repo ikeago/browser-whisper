@@ -18,11 +18,14 @@ import type {
     QuantizationType,
 } from '../types.js';
 import { MODELS } from '../types.js';
-import { ModelLoadError } from '../errors.js';
 import { createOPFSCache } from '../lib/opfs-cache.js';
 import { hasWebGPUAdapter } from '../lib/webgpu.js';
 import { createLoadProgressTracker } from '../lib/load-progress.js';
 import { buildSegments, type TimestampChunk } from '../lib/word-segments.js';
+import { createFatalErrorTrap } from '../lib/fatal-errors.js';
+
+// Surfaces errors that escape transformers.js' promise chains (see fatal-errors.ts) as load errors.
+const fatalErrors = createFatalErrorTrap(self as unknown as EventTarget);
 
 // ---------------------------------------------------------------------------
 // transformers.js environment setup
@@ -128,24 +131,29 @@ self.onmessage = async (e: MessageEvent) => {
                     )) as ASRPipeline;
                 };
 
-                // Check for a usable GPU adapter *before* asking transformers.js for WebGPU.
-                // transformers.js 4.x serialises every InferenceSession.create() on a module-level
-                // promise chain (`webInitChain = webInitChain.then(load)` in backends/onnx.js).
-                // A rejected WebGPU session leaves that chain rejected, so every later session
-                // in this worker (including the WASM fallback) re-throws the same error.
-                // (3.x had the same failure mode via the memoized `wasmInitPromise`.)
-                if (await hasWebGPUAdapter()) {
-                    try {
-                        asrPipeline = await loadPipeline('webgpu');
-                    } catch (gpuErr) {
-                        const msg = gpuErr instanceof Error ? gpuErr.message : String(gpuErr);
-                        console.warn(`[browser-whisper] WebGPU initialization failed (${msg}). Falling back to WASM execution.`);
-                        asrPipeline = await loadPipeline('wasm');
+                const loadWithFallback = async (): Promise<ASRPipeline> => {
+                    // Check for a usable GPU adapter *before* asking transformers.js for WebGPU.
+                    // transformers.js 4.x serialises every InferenceSession.create() on a module-level
+                    // promise chain (`webInitChain = webInitChain.then(load)` in backends/onnx.js).
+                    // A rejected WebGPU session leaves that chain rejected, so every later session
+                    // in this worker (including the WASM fallback) re-throws the same error.
+                    // (3.x had the same failure mode via the memoized `wasmInitPromise`.)
+                    if (await hasWebGPUAdapter()) {
+                        try {
+                            return await loadPipeline('webgpu');
+                        } catch (gpuErr) {
+                            const msg = gpuErr instanceof Error ? gpuErr.message : String(gpuErr);
+                            console.warn(`[browser-whisper] WebGPU initialization failed (${msg}). Falling back to WASM execution.`);
+                            return await loadPipeline('wasm');
+                        }
+                    } else {
+                        console.warn('[browser-whisper] No WebGPU adapter available. Using WASM execution.');
+                        return await loadPipeline('wasm');
                     }
-                } else {
-                    console.warn('[browser-whisper] No WebGPU adapter available. Using WASM execution.');
-                    asrPipeline = await loadPipeline('wasm');
-                }
+                };
+                // Guard the whole load: an error that escapes transformers.js' internal promises
+                // would otherwise leave this await pending forever (UI stuck at 99%).
+                asrPipeline = await fatalErrors.guard(loadWithFallback());
 
                 // Compile WebGPU shaders by running a dummy inference
                 // WebGPU has a cold-start delay of 1-5s for shader compilation on the first run.
@@ -153,7 +161,7 @@ self.onmessage = async (e: MessageEvent) => {
                 postMain({ type: 'progress', event: { stage: 'loading', progress: 0.99 } });
                 try {
                     const dummyAudio = new Float32Array(16000 * 0.1); // 0.1s of silence
-                    await asrPipeline(dummyAudio, { sampling_rate: 16_000 });
+                    await fatalErrors.guard(asrPipeline(dummyAudio, { sampling_rate: 16_000 }));
                 } catch (e) {
                     // Ignore dummy inference errors
                     console.warn('[whisper.worker] pre-warm failed:', e);
@@ -166,8 +174,8 @@ self.onmessage = async (e: MessageEvent) => {
             currentModel = null;
             currentQuantization = null;
             asrPipeline = null;
-            const loadErr = new ModelLoadError(config.hfId, err);
-            postMain({ type: 'error', message: loadErr.message });
+            console.error('[browser-whisper] Model load failed:', err);
+            postMain({ type: 'error', message: err instanceof Error ? err.message : String(err), loadModelId: config.hfId });
         }
     }
 };

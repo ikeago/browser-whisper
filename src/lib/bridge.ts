@@ -26,7 +26,7 @@ import type {
     PCMChunk,
     QuantizationType,
 } from '../types.js';
-import { BrowserWhisperError } from '../errors.js';
+import { readyError } from '../errors.js';
 import { Chunker } from './chunker.js';
 import { downmixToMono, resampleTo16kHz } from './resampler.js';
 
@@ -295,7 +295,7 @@ export class Bridge {
                     resolve();
                 } else if (e.data.type === 'error') {
                     this.whisperWorker.onmessage = original;
-                    reject(new BrowserWhisperError(e.data.message));
+                    reject(readyError(e.data));
                 } else {
                     // Forward progress events (model download) during loading
                     this.handleWhisperMessage(e.data);
